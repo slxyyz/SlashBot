@@ -57,7 +57,6 @@ class CoreCog(commands.Cog):
 
     # Ping command
     @app_commands.command(name="ping", description="Checks the bot's latency")
-    @app_commands.checks.cooldown(5, 60.0, type=app_commands.CooldownType.user)  # Cooldown to prevent spam
     async def ping(self, interaction: discord.Interaction):
         """Responds with the bot's latency."""
         try:
