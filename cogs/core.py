@@ -72,8 +72,8 @@ class CoreCog(commands.Cog):
             )
 
     # Botinfo command
-    @app_commands.command(name="bot_info", description="Displays information about the bot")
-    async def bot_info(self, interaction: discord.Interaction):
+    @app_commands.command(name="info", description="Displays information about the bot")
+    async def info(self, interaction: discord.Interaction):
         """Displays bot information."""
         try:
             current_time = datetime.datetime.now(timezone.utc) # Set current time
