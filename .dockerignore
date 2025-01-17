@@ -32,5 +32,8 @@ Dockerfile
 README.md
 *.txt
 
+# Allow requirements.txt
+!requirements.txt
+
 # Ignore node_modules if using any frontend libraries
 node_modules/
