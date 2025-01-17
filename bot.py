@@ -1,11 +1,9 @@
-import os
-import sys
-import logging
-import asyncio
-
-import discord
+import discord, logging
 from discord.ext import commands
 from dotenv import load_dotenv
+
+import os, sys, asyncio, datetime
+from datetime import timezone
 
 # Load environment variables
 load_dotenv()
@@ -55,6 +53,8 @@ class MyBot(commands.Bot):
             intents=intents,
             help_command=None,
         )
+        # Creates a variable to track uptime
+        self.start_time = datetime.datetime.now(timezone.utc)
 
     # Load all cogs
     async def setup_hook(self):
