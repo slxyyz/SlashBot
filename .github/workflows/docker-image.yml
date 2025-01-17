@@ -19,7 +19,7 @@ jobs:
 
     - name: Build and tag Docker image
       run: |
-        docker build -t slxyyz/slashbot:latest .
+        docker build -t slxyyz/discord-bot:latest .
 
     - name: Push Docker image to DockerHub
       run: |
