@@ -1,5 +1,6 @@
 import discord, logging
 from discord.ext import commands
+from discord import app_commands
 from dotenv import load_dotenv
 
 import os, sys, asyncio, datetime
@@ -9,7 +10,7 @@ from datetime import timezone
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = os.getenv("GUILD_ID", "0") # Defaults to Zero (global sync)
+GUILD_ID = os.getenv("GUILD_ID", "0")  # Defaults to Zero (global sync)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Check if DISCORD_TOKEN is set
@@ -87,6 +88,50 @@ class MyBot(commands.Bot):
     async def on_ready(self):
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         logger.info("Bot is online and ready to receive commands!")
+
+    # Global error handling
+    async def on_interaction(self, interaction: discord.Interaction):
+        try:
+            # Let the normal interaction processing happen
+            await super().on_interaction(interaction)
+        except app_commands.CommandOnCooldown as e:
+            await interaction.response.send_message(
+                f"This command is on cooldown. Try again in {e.retry_after:.2f}s",
+                ephemeral=True,
+            )
+        except app_commands.MissingPermissions:
+            await interaction.response.send_message(
+                "You don't have the required permissions to use this command.",
+                ephemeral=True,
+            )
+        except app_commands.BotMissingPermissions:
+            await interaction.response.send_message(
+                "I don't have the required permissions to execute this command.",
+                ephemeral=True,
+            )
+        except app_commands.CommandNotFound:
+            # This shouldn't normally happen with slash commands
+            await interaction.response.send_message(
+                "Command not found.", ephemeral=True
+            )
+        except Exception as e:
+            # Log unexpected errors
+            logger.error(
+                f"Error in command {interaction.command}: {str(e)}", exc_info=True
+            )
+
+            # If the interaction hasn't been responded to yet
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "An unexpected error occurred. Please try again later.",
+                    ephemeral=True,
+                )
+            # If it has been responded to but we need to follow up
+            else:
+                await interaction.followup.send(
+                    "An unexpected error occurred. Please try again later.",
+                    ephemeral=True,
+                )
 
 async def main():
     bot = MyBot()
