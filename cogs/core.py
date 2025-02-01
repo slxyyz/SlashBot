@@ -5,6 +5,7 @@ from discord import app_commands
 import os, datetime
 from datetime import timezone
 
+
 class CoreCog(commands.Cog):
     """
     A simple Cog that provides basic slash commands.
@@ -62,9 +63,9 @@ class CoreCog(commands.Cog):
     @app_commands.command(name="info", description="Displays information about the bot")
     async def info(self, interaction: discord.Interaction):
         """Displays bot information."""
-        current_time = datetime.datetime.now(timezone.utc) # Set current time
-        uptime = current_time - self.bot.start_time # Calculate uptime
-        uptime_str = str(uptime).split(".")[0] # Convert to string
+        current_time = datetime.datetime.now(timezone.utc)  # Set current time
+        uptime = current_time - self.bot.start_time  # Calculate uptime
+        uptime_str = str(uptime).split(".")[0]  # Convert to string
 
         # Create embed
         embed = discord.Embed(title="Bot Information", color=discord.Color.blue())
@@ -83,22 +84,22 @@ class CoreCog(commands.Cog):
     )
     async def serverinfo(self, interaction: discord.Interaction):
         """Displays server information."""
+
+        if interaction.guild is None:
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
+
         guild = interaction.guild
-        embed = discord.Embed(
-            title=f"{guild.name}", color=discord.Color.purple()
-        )
+        embed = discord.Embed(title=f"{guild.name}", color=discord.Color.purple())
         embed.add_field(name="Server ID", value=str(guild.id), inline=False)
         embed.add_field(
             name="Owner", value=f"{guild.owner} (ID: {guild.owner_id})", inline=False
         )
         embed.add_field(name="Members", value=str(guild.member_count), inline=True)
-        embed.add_field(
-            name="Channels", value=str(len(guild.channels)), inline=True
-        )
+        embed.add_field(name="Channels", value=str(len(guild.channels)), inline=True)
         embed.add_field(name="Roles", value=str(len(guild.roles)), inline=True)
-        embed.set_thumbnail(
-            url=guild.icon.url if guild.icon else discord.Embed.Empty
-        )
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
         embed.set_footer(text="Server Info")
         await interaction.response.send_message(embed=embed, ephemeral=True)
         self.logger.info(
@@ -120,9 +121,7 @@ class CoreCog(commands.Cog):
         if channel is None:
             channel = interaction.channel
 
-        embed = discord.Embed(
-            title=f"{channel.name}", color=discord.Color.gold()
-        )
+        embed = discord.Embed(title=f"{channel.name}", color=discord.Color.gold())
         embed.add_field(name="Channel ID", value=str(channel.id), inline=True)
         embed.add_field(name="Channel Type", value=str(channel.type), inline=False)
         embed.add_field(
@@ -173,7 +172,6 @@ class CoreCog(commands.Cog):
 
         self.logger.info(f"Activity updated to '{activity}' by {interaction.user}.")
 
-
     # # Invite Link command
     # @app_commands.command(name="invite", description="Get the bot's invite link")
     # async def invite(self, interaction: discord.Interaction):
@@ -192,4 +190,3 @@ class CoreCog(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CoreCog(bot))
-
