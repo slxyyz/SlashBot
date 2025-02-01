@@ -47,8 +47,6 @@ class HelpCog(commands.Cog):
             self.logger.info(f"Displayed a general help list to {interaction.user}.")
             return
 
-        # If a command name is provided, attempt to find and display details for it.
-        # Note: This checks top-level commands only, not subcommands.
         cmd = self.bot.tree.get_command(command, type=discord.AppCommandType.chat_input)
 
         if cmd is None:
@@ -67,9 +65,6 @@ class HelpCog(commands.Cog):
             description=cmd.description or "No description provided.",
             color=discord.Color.green(),
         )
-
-        # If you wanted to show parameters, usage, or subcommands, you could expand here.
-        # For instance, if you have slash command options, you could list them out.
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
         self.logger.info(
