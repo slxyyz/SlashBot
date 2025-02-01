@@ -1,23 +1,25 @@
-import discord, logging
+import os
+import sys
+import logging
+import asyncio
+import datetime
+from datetime import timezone
+
+import discord
 from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
 
-import os, sys, asyncio, datetime
-from datetime import timezone
-
 # Load environment variables
 load_dotenv()
-
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = os.getenv("GUILD_ID", "0")
+GUILD_ID = os.getenv("GUILD_ID", "0")  # Defaults to 0 (global sync)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-# Check if DISCORD_TOKEN is set
 if not TOKEN:
     sys.exit("Error: DISCORD_TOKEN is not set in the .env file.")
 
-# Check if LOG_LEVEL is valid
+# Validate log level
 valid_log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 if LOG_LEVEL.upper() not in valid_log_levels:
     print(f"Invalid LOG_LEVEL '{LOG_LEVEL}' specified. Defaulting to 'INFO'.")
@@ -38,13 +40,16 @@ logger = logging.getLogger(__name__)
 try:
     GUILD_ID = int(GUILD_ID)
 except ValueError:
-    logger.warning("GUILD_ID is not a valid integer. Defaulting to 0 (global sync).")
+    logger.warning(
+        "GUILD_ID is not a valid integer. Defaulting to 0 (global command sync)."
+    )
     GUILD_ID = 0
 logger.debug(f"GUILD_ID set to: {GUILD_ID}")
 
 # Enable Intents
 intents = discord.Intents.default()
 intents.message_content = True
+
 
 # Create the bot
 class MyBot(commands.Bot):
@@ -54,12 +59,11 @@ class MyBot(commands.Bot):
             intents=intents,
             help_command=None,
         )
-        # Creates a variable to track uptime
+        # Track bot start time
         self.start_time = datetime.datetime.now(timezone.utc)
 
-    # Load all cogs
     async def setup_hook(self):
-        # 1. Load all cogs from the "./cogs" directory
+        # Load all cogs from the "./cogs" directory
         for filename in os.listdir("cogs"):
             if filename.endswith(".py") and not filename.startswith("__"):
                 cog_name = filename[:-3]
@@ -69,7 +73,7 @@ class MyBot(commands.Bot):
                 except Exception as e:
                     logger.error(f"Failed to load cog {cog_name}: {e}")
 
-        # 2. Sync commands to set Guild, if no Guild is set defaults to global command registration
+        # Sync commands to set Guild, if no Guild is set defaults to global command registration
         try:
             if GUILD_ID != 0:
                 # Copy all commands recognized so far into the Guild
@@ -84,54 +88,41 @@ class MyBot(commands.Bot):
         except Exception as e:
             logger.error(f"Command sync failed: {e}")
 
-    # Log when the bot is ready
     async def on_ready(self):
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         logger.info("Bot is online and ready to receive commands!")
 
-    # Global error handling
+    # Global error handler for interactions
     async def on_interaction(self, interaction: discord.Interaction):
         try:
+            # Process the interaction normally
             await super().on_interaction(interaction)
-            
+        except app_commands.CommandOnCooldown as cooldown_error:
+            await interaction.response.send_message(
+                f"This command is on cooldown. Try again in {cooldown_error.retry_after:.2f}s",
+                ephemeral=True,
+            )
         except app_commands.MissingPermissions:
-            # The user lacks the needed permissions
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    "You don't have the required permissions to use this command.",
-                    ephemeral=True,
-                )
-            else:
-                await interaction.followup.send(
-                    "You don't have the required permissions to use this command.",
-                    ephemeral=True,
-                )
-
+            await interaction.response.send_message(
+                "You don't have the required permissions to use this command.",
+                ephemeral=True,
+            )
         except app_commands.BotMissingPermissions:
-            # The bot itself lacks the needed permissions
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    "I lack the required permissions to execute this command.",
-                    ephemeral=True,
-                )
-            else:
-                await interaction.followup.send(
-                    "I lack the required permissions to execute this command.",
-                    ephemeral=True,
-                )
-
+            await interaction.response.send_message(
+                "I don't have the required permissions to execute this command.",
+                ephemeral=True,
+            )
         except app_commands.CommandNotFound:
-            # Shoudn't happen, but just in case
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    "Command not found.", ephemeral=True
-                )
-            else:
-                await interaction.followup.send("Command not found.", ephemeral=True)
+            # Unlikely with slash commands
+            await interaction.response.send_message(
+                "Command not found.", ephemeral=True
+            )
+        except Exception as error:
+            # Log unexpected errors with traceback
+            command_name = interaction.command if interaction.command else "Unknown"
+            logger.error(f"Error in command {command_name}: {error}", exc_info=True)
 
-        except Exception as e:
-            # Log unexpected errors
-            logger.error(f"Error in command {interaction.command}: {e}", exc_info=True)
+            # Send an error message to the user
             if not interaction.response.is_done():
                 await interaction.response.send_message(
                     "An unexpected error occurred. Please try again later.",
@@ -155,6 +146,7 @@ async def main():
         except Exception as e:
             logger.critical(f"Unexpected error: {e}")
             sys.exit(1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
